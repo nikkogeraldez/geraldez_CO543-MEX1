@@ -1,14 +1,14 @@
 
-# 🎮 Red Light Green Light (RLGL) – Computer Vision Project
+# Red Light Green Light (RLGL) – Computer Vision Project
 
-## 📌 Overview
+## Overview
 This project implements a **Red Light Green Light game** using webcam-based motion detection with OpenCV.
 
 The system analyzes frame differences to determine whether the player is moving or staying still.
 
 ---
 
-## 🚀 Features
+## Features
 - Real-time webcam capture
 - Motion detection using frame differencing
 - State machine:
@@ -21,7 +21,7 @@ The system analyzes frame differences to determine whether the player is moving 
 
 ---
 
-## 🧠 Algorithm
+## Algorithm
 
 ### Motion Score
 ``
