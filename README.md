@@ -6,7 +6,6 @@ This project implements a **Red Light Green Light game** using webcam-based moti
 
 The system analyzes frame differences to determine whether the player is moving or staying still.
 
----
 
 ## Features
 - Real-time webcam capture
@@ -19,7 +18,6 @@ The system analyzes frame differences to determine whether the player is moving 
 - Idle detection and penalties
 - Randomized timing for realism
 
----
 
 ## Algorithm
 
