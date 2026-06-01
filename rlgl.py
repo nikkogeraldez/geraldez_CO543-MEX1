@@ -1,154 +1,63 @@
+Learning Outcomes
+By the end of this exercise, you should be able to:
+• Capture and process real-time webcam frames.
+• Detect movement between consecutive frames.
+• Implement state-based game logic (GREEN, RED, WARNING, DEAD, LEVEL_UP).
+• Tune thresholds and timing in a noisy real-world CV setup.
+• Explain design tradeoffs and failure cases.
 
-import cv2
-import numpy as np
-import time
-import random
+Project Specifications
+Implement a Red Light Green Light game with the following rules:
+• Game starts in GREEN.
+• During GREEN, player must move.
+• System switches to RED after a random GREEN duration.
+• During RED, player must remain still.
+• If movement during RED exceeds threshold after grace window, player dies.
+• If player survives RED, the game continues.
+• During GREEN, if player stays still too long, show warning; if still no movement, player dies.
 
-# =============================
-# PARAMETERS
-# =============================
-GREEN_MOVE_THRESHOLD = 0.04
-RED_MOVE_THRESHOLD = 0.055
+Technical Requirements
+You must implement all of the following sections.
+A. Input and Preprocessing
+• Read webcam stream continuously.
+• Resize frame for speed (recommended width: 640).
+• Convert frames to grayscale.
+• Optionally apply blur to reduce noise.
+B. Motion Score
+Compute motion score from frame-to-frame difference:
+• diff = abs(current_gray - previous_gray)
+• motion_score = mean(diff) / 255.0
+• Optionally threshold binary motion mask before scoring.
+C. RLGL State Machine
+Required states:
+• GREEN
+• RED
+• WARNING
+• DEAD
 
-RED_GRACE_MS = 650
-IDLE_WARNING_MS = 1800
-IDLE_DEATH_MS = 3600
+Required timers/variables:
+• green_duration (randomized)
+• red_duration (randomized)
+• red_grace_ms
+• idle_warning_ms
+• idle_death_ms
+D. Rules
+GREEN State
+• If motion is below green_move_threshold, start/continue idle timer.
+• If idle timer > idle_warning_ms: enter WARNING.
+• If idle timer > idle_death_ms: DEAD.
+• After green timer expires: switch to RED.
+RED State
+• First red_grace_ms are ignored.
+• After grace, if motion > red_move_threshold(level): DEAD.
+• If red timer expires without violation: success.
 
-GREEN_MIN = 2.6
-GREEN_MAX = 4.2
-
-RED_MIN = 1.7
-RED_MAX = 2.9
-
-# =============================
-# STATES
-# =============================
-GREEN = "GREEN"
-RED = "RED"
-WARNING = "WARNING"
-DEAD = "DEAD"
-
-# =============================
-# FUNCTIONS
-# =============================
-def compute_motion(prev, curr):
-    diff = cv2.absdiff(prev, curr)
-    return np.mean(diff) / 255.0
-
-def draw_text(frame, text, y, color=(255, 255, 255), scale=0.7):
-    cv2.putText(frame, text, (20, y), cv2.FONT_HERSHEY_SIMPLEX, scale, color, 2)
-
-# =============================
-# MAIN PROGRAM
-# =============================
-def main():
-    cap = cv2.VideoCapture(0)
-
-    if not cap.isOpened():
-        print("Error: Could not access webcam.")
-        return
-
-    state = GREEN
-    prev_gray = None
-
-    state_start = time.time()
-    idle_start = None
-    dead_reason = ""
-
-    green_duration = random.uniform(GREEN_MIN, GREEN_MAX)
-    red_duration = random.uniform(RED_MIN, RED_MAX)
-
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        frame = cv2.resize(frame, (640, 480))
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (7, 7), 0)
-
-        motion_score = 0
-
-        if prev_gray is not None:
-            motion_score = compute_motion(prev_gray, gray)
-
-        prev_gray = gray
-
-        now = time.time()
-        elapsed = now - state_start
-        elapsed_ms = elapsed * 1000
-
-        # =============================
-        # STATE LOGIC
-        # =============================
-        if state == GREEN:
-            color = (0, 255, 0)
-
-            if motion_score < GREEN_MOVE_THRESHOLD:
-                if idle_start is None:
-                    idle_start = now
-
-                idle_time = (now - idle_start) * 1000
-
-                if idle_time > IDLE_DEATH_MS:
-                    state = DEAD
-                    dead_reason = "Stayed still too long"
-                elif idle_time > IDLE_WARNING_MS:
-                    state = WARNING
-            else:
-                idle_start = None
-
-            if elapsed > green_duration:
-                state = RED
-                state_start = now
-                red_duration = random.uniform(RED_MIN, RED_MAX)
-
-        elif state == WARNING:
-            color = (0, 255, 255)
-
-            if motion_score >= GREEN_MOVE_THRESHOLD:
-                state = GREEN
-                idle_start = None
-            else:
-                idle_time = (now - idle_start) * 1000
-                if idle_time > IDLE_DEATH_MS:
-                    state = DEAD
-                    dead_reason = "Ignored warning"
-
-        elif state == RED:
-            color = (0, 0, 255)
-
-            if elapsed_ms > RED_GRACE_MS:
-                if motion_score > RED_MOVE_THRESHOLD:
-                    state = DEAD
-                    dead_reason = "Moved during RED"
-
-            if elapsed > red_duration:
-                state = GREEN
-                state_start = now
-                green_duration = random.uniform(GREEN_MIN, GREEN_MAX)
-
-        elif state == DEAD:
-            color = (0, 0, 0)
-
-        # =============================
-        # DISPLAY
-        # =============================
-        draw_text(frame, f"State: {state}", 40, color, 1)
-        draw_text(frame, f"Motion: {motion_score:.4f}", 80)
-
-        if state == DEAD:
-            draw_text(frame, f"Game Over: {dead_reason}", 120, (0, 0, 255))
-
-        cv2.imshow("RLGL Game", frame)
-
-        # Press Q to quit
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-
-if __name__ == "__main__":
-    main()
+Suggested Baseline Parameters
+Use these as starting values and tune as needed:
+• green_move_threshold = 0.04
+• red_move_threshold_base = 0.055
+• red_grace_ms = 650
+• idle_warning_ms = 1800
+• idle_death_ms = 3600
+• Green duration range level 1: 2600ms – 4200ms
+• Red duration range level 1: 1700ms – 2900ms
