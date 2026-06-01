@@ -18,8 +18,4 @@ The system analyzes frame differences to determine whether the player is moving 
 - Idle detection and penalties
 - Randomized timing for realism
 
-
-## Algorithm
-
-### Motion Score
-``
+Video: https://youtu.be/yAjmVd_upVU 
